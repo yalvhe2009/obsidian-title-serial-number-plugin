@@ -2,7 +2,7 @@
 
 This plugin adds serial numbers to your markdown title.
 
-![quick start](assets/quick-start.gif)
+![quick start](https://raw.githubusercontent.com/yalvhe2009/obsidian-title-serial-number-plugin/master/assets/quick-start.gif)
 
 Now, This plugin noly provides two commands and their graphical interface for configuration!
 
@@ -11,5 +11,5 @@ Now, This plugin noly provides two commands and their graphical interface for co
   - `Clear Serial Number For Title`
 - configuration interface：
 
-![configuration interface](assets/configuration-interface.png)
+![configuration interface](https://raw.githubusercontent.com/yalvhe2009/obsidian-title-serial-number-plugin/master/assets/configuration-interface.png)
 
