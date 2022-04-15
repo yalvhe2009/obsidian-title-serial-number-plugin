@@ -33,7 +33,7 @@ For example, I acitved H2 and H4.
 #### Day
 ```
 
-When I executed command `Set Serial Number For Title` in below article, I got this:
+When I executed command `Set Serial Number For Title` in above article, I got this:
 
 ```markdown
 ## 1 Hello
