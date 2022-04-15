@@ -6,8 +6,7 @@ import { TitleSerialNumberPluginSettings, TitleSerialNumberPluginSettingTab } fr
 
 
 const DEFAULT_SETTINGS: TitleSerialNumberPluginSettings = {
-	startWith: '1',
-	endWith: '6'
+	activedHeadlines: [1, 2, 3, 4, 5, 6]
 }
 
 export default class TitleSerialNumberPlugin extends Plugin {
@@ -22,8 +21,8 @@ export default class TitleSerialNumberPlugin extends Plugin {
 			name: 'Set Serial Number For Title',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				//console.log(this.settings);
-				let startWith: number = parseInt(this.settings.startWith);
-				let endWith: number = parseInt(this.settings.endWith);
+				let startWith: number = 1//parseInt(this.settings.startWith);
+				let endWith: number = 3//parseInt(this.settings.endWith);
 				if(startWith > endWith){
 					new Notice('Your configuration is ERROR, command terminated!');
 					return;
@@ -45,7 +44,7 @@ export default class TitleSerialNumberPlugin extends Plugin {
 					let title:string = m[3];
 					let matchStartIndex:number = m.index;//匹配项在文本中的索引位置
 					//获取序号
-					let newSerialNumber = SerialNumberHelper.getSerialNumberStr(wellStr.length, startWith, endWith);//新的序号
+					let newSerialNumber = SerialNumberHelper.getSerialNumberStr(wellStr.length, this.settings.activedHeadlines);//新的序号
 					let result = '';
 					if (newSerialNumber === '') {
 						result = `${wellStr} ${title}`;
