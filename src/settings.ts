@@ -1,23 +1,23 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import TitleSerialNumberPlugin from './main';
 
-// 序号样式类型
+// Number style type
 export type NumberStyle = 'arabic' | 'chinese' | 'chinese_capital' | 'roman' | 'roman_lower' | 'alpha' | 'alpha_lower';
 
-// 每个级别的样式配置
+// Style configuration for each level
 export interface LevelStyleConfig {
     style: NumberStyle;
 }
 
-// 插件设置接口
+// Plugin settings interface
 export interface TitleSerialNumberPluginSettings {
-    startLevel: number;                          // 从哪个级别开始编号 (1-6)
-    endLevel: number;                            // 到哪个级别结束编号 (1-6)
-    separator: string;                           // 级别之间的分隔符
-    levelStyles: { [level: number]: NumberStyle }; // 每个级别的序号样式
+    startLevel: number;                          // Starting level for numbering (1-6)
+    endLevel: number;                            // Ending level for numbering (1-6)
+    separator: string;                           // Separator between levels
+    levelStyles: { [level: number]: NumberStyle }; // Number style for each level
 }
 
-// 默认设置
+// Default settings
 export const DEFAULT_SETTINGS: TitleSerialNumberPluginSettings = {
     startLevel: 1,
     endLevel: 6,
@@ -32,18 +32,18 @@ export const DEFAULT_SETTINGS: TitleSerialNumberPluginSettings = {
     }
 };
 
-// 样式显示名称映射
+// Style display name mapping
 export const STYLE_DISPLAY_NAMES: { [key in NumberStyle]: string } = {
-    'arabic': '阿拉伯数字 (1, 2, 3...)',
-    'chinese': '中文小写 (一, 二, 三...)',
-    'chinese_capital': '中文大写 (壹, 贰, 叁...)',
-    'roman': '罗马大写 (I, II, III...)',
-    'roman_lower': '罗马小写 (i, ii, iii...)',
-    'alpha': '字母大写 (A, B, C...)',
-    'alpha_lower': '字母小写 (a, b, c...)'
+    'arabic': 'Arabic (1, 2, 3...)',
+    'chinese': 'Chinese Lowercase (一, 二, 三...)',
+    'chinese_capital': 'Chinese Uppercase (壹, 贰, 叁...)',
+    'roman': 'Roman Uppercase (I, II, III...)',
+    'roman_lower': 'Roman Lowercase (i, ii, iii...)',
+    'alpha': 'Alpha Uppercase (A, B, C...)',
+    'alpha_lower': 'Alpha Lowercase (a, b, c...)'
 };
 
-// 设置页面类
+// Settings tab class
 export class TitleSerialNumberPluginSettingTab extends PluginSettingTab {
     plugin: TitleSerialNumberPlugin;
     private previewContainer: HTMLElement | null = null;
@@ -57,12 +57,12 @@ export class TitleSerialNumberPluginSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        containerEl.createEl('h2', { text: '标题序号插件设置' });
+        containerEl.createEl('h2', { text: 'Title Serial Number Settings' });
 
-        // 起始级别设置
+        // Start level setting
         new Setting(containerEl)
-            .setName('起始标题级别')
-            .setDesc('从哪个标题级别开始添加序号 (H1-H6)')
+            .setName('Start Heading Level')
+            .setDesc('Which heading level to start adding serial numbers (H1-H6)')
             .addDropdown(dropdown => {
                 for (let i = 1; i <= 6; i++) {
                     dropdown.addOption(i.toString(), `H${i}`);
@@ -71,19 +71,19 @@ export class TitleSerialNumberPluginSettingTab extends PluginSettingTab {
                 dropdown.onChange(async (value) => {
                     const newStartLevel = parseInt(value);
                     this.plugin.settings.startLevel = newStartLevel;
-                    // 确保结束级别不小于起始级别
+                    // Ensure end level is not less than start level
                     if (this.plugin.settings.endLevel < newStartLevel) {
                         this.plugin.settings.endLevel = newStartLevel;
                     }
                     await this.plugin.saveSettings();
-                    this.display(); // 刷新显示
+                    this.display(); // Refresh display
                 });
             });
 
-        // 结束级别设置
+        // End level setting
         new Setting(containerEl)
-            .setName('结束标题级别')
-            .setDesc('到哪个标题级别结束添加序号 (H1-H6)')
+            .setName('End Heading Level')
+            .setDesc('Which heading level to stop adding serial numbers (H1-H6)')
             .addDropdown(dropdown => {
                 for (let i = this.plugin.settings.startLevel; i <= 6; i++) {
                     dropdown.addOption(i.toString(), `H${i}`);
@@ -92,37 +92,37 @@ export class TitleSerialNumberPluginSettingTab extends PluginSettingTab {
                 dropdown.onChange(async (value) => {
                     this.plugin.settings.endLevel = parseInt(value);
                     await this.plugin.saveSettings();
-                    this.display(); // 刷新显示以更新样式选项和预览
+                    this.display(); // Refresh to update style options and preview
                 });
             });
 
-        // 分隔符设置
+        // Separator setting
         new Setting(containerEl)
-            .setName('序号分隔符')
-            .setDesc('各级序号之间的分隔符，如 "." 会生成 1.1.1，"、" 会生成 1、1、1')
+            .setName('Number Separator')
+            .setDesc('Separator between level numbers, e.g. "." produces 1.1.1, "-" produces 1-1-1')
             .addText(text => {
                 text.setPlaceholder('.')
                     .setValue(this.plugin.settings.separator)
                     .onChange(async (value) => {
                         this.plugin.settings.separator = value;
                         await this.plugin.saveSettings();
-                        this.updatePreview(); // 实时更新预览
+                        this.updatePreview(); // Update preview in real-time
                     });
             });
 
-        // 分隔线
+        // Divider
         containerEl.createEl('hr');
-        containerEl.createEl('h3', { text: '各级标题序号样式' });
+        containerEl.createEl('h3', { text: 'Heading Number Styles' });
         containerEl.createEl('p', { 
-            text: '为每个标题级别选择序号样式',
+            text: 'Choose number style for each heading level',
             cls: 'setting-item-description'
         });
 
-        // 每个级别的样式设置
+        // Style setting for each level
         for (let level = this.plugin.settings.startLevel; level <= this.plugin.settings.endLevel; level++) {
             new Setting(containerEl)
-                .setName(`H${level} 序号样式`)
-                .setDesc(`第 ${level} 级标题的序号样式`)
+                .setName(`H${level} Number Style`)
+                .setDesc(`Number style for heading level ${level}`)
                 .addDropdown(dropdown => {
                     for (const [style, displayName] of Object.entries(STYLE_DISPLAY_NAMES)) {
                         dropdown.addOption(style, displayName);
@@ -131,41 +131,41 @@ export class TitleSerialNumberPluginSettingTab extends PluginSettingTab {
                     dropdown.onChange(async (value) => {
                         this.plugin.settings.levelStyles[level] = value as NumberStyle;
                         await this.plugin.saveSettings();
-                        this.updatePreview(); // 实时更新预览
+                        this.updatePreview(); // Update preview in real-time
                     });
                 });
         }
 
-        // 分隔线
+        // Divider
         containerEl.createEl('hr');
-        containerEl.createEl('h3', { text: '预览' });
+        containerEl.createEl('h3', { text: 'Preview' });
 
-        // 生成预览
+        // Generate preview
         this.previewContainer = containerEl.createDiv({ cls: 'serial-number-preview' });
         this.renderPreview(this.previewContainer);
     }
 
-    // 更新预览
+    // Update preview
     private updatePreview(): void {
         if (this.previewContainer) {
             this.renderPreview(this.previewContainer);
         }
     }
 
-    // 渲染预览
+    // Render preview
     private renderPreview(container: HTMLElement): void {
         const { startLevel, endLevel, separator, levelStyles } = this.plugin.settings;
         
-        // 动态导入转换器（避免循环依赖）
+        // Dynamic import converter (avoid circular dependency)
         import('./numberConverter').then(({ NumberConverter }) => {
             const previewLines: string[] = [];
             const counters: number[] = [0, 0, 0, 0, 0, 0];
             
-            // 模拟生成序号预览
+            // Simulate serial number preview
             for (let level = startLevel; level <= endLevel; level++) {
                 counters[level - 1] = 1;
                 
-                // 构建序号字符串
+                // Build serial number string
                 const parts: string[] = [];
                 for (let l = startLevel; l <= level; l++) {
                     const style = levelStyles[l] || 'arabic';
@@ -175,7 +175,7 @@ export class TitleSerialNumberPluginSettingTab extends PluginSettingTab {
                 
                 const serialNumber = parts.join(separator);
                 const hashes = '#'.repeat(level);
-                previewLines.push(`${hashes} ${serialNumber} 示例标题`);
+                previewLines.push(`${hashes} ${serialNumber} Example Heading`);
             }
             
             container.empty();

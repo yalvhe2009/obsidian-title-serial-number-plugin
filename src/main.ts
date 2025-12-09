@@ -19,7 +19,7 @@ export default class TitleSerialNumberPlugin extends Plugin {
         // 添加设置序号命令
         this.addCommand({
             id: 'set-title-serial-number',
-            name: '添加标题序号 (Set Serial Number)',
+            name: 'Set Serial Number',
             editorCallback: (editor: Editor, view: MarkdownView) => {
                 this.setSerialNumbers(editor);
             }
@@ -28,7 +28,7 @@ export default class TitleSerialNumberPlugin extends Plugin {
         // 添加清除序号命令
         this.addCommand({
             id: 'clear-title-serial-number',
-            name: '清除标题序号 (Clear Serial Number)',
+            name: 'Clear Serial Number',
             editorCallback: (editor: Editor, view: MarkdownView) => {
                 this.clearSerialNumbers(editor);
             }
@@ -48,7 +48,7 @@ export default class TitleSerialNumberPlugin extends Plugin {
     private setSerialNumbers(editor: Editor): void {
         // 验证设置
         if (this.settings.startLevel > this.settings.endLevel) {
-            new Notice('配置错误：起始级别不能大于结束级别！');
+            new Notice('Configuration error: start level cannot be greater than end level!');
             return;
         }
 
@@ -64,9 +64,9 @@ export default class TitleSerialNumberPlugin extends Plugin {
         // 更新编辑器
         if (content !== newContent) {
             editor.setValue(newContent);
-            new Notice('标题序号已添加！');
+            new Notice('Serial number added!');
         } else {
-            new Notice('没有需要添加序号的标题。');
+            new Notice('No titles need to add serial number.');
         }
     }
 
@@ -79,9 +79,9 @@ export default class TitleSerialNumberPlugin extends Plugin {
 
         if (content !== newContent) {
             editor.setValue(newContent);
-            new Notice('标题序号已清除！');
+            new Notice('Serial number cleared!');
         } else {
-            new Notice('没有需要清除的序号。');
+            new Notice('No serial number to clear.');
         }
     }
 
