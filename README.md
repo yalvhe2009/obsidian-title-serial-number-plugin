@@ -2,7 +2,7 @@
 
 A powerful Obsidian plugin that automatically adds customizable serial numbers to your markdown headings.
 
-![quick start](https://raw.githubusercontent.com/yalvhe2009/obsidian-title-serial-number-plugin/master/assets/quick-start.gif)
+![quick start](https://raw.githubusercontent.com/yalvhe2009/obsidian-title-serial-number-plugin/main/assets/quick-start.gif)
 
 ## Features
 
@@ -34,7 +34,7 @@ A powerful Obsidian plugin that automatically adds customizable serial numbers t
 
 Access the plugin settings through `Settings → Community Plugins → Title Serial Number Plugin`.
 
-![configuration interface](https://raw.githubusercontent.com/yalvhe2009/obsidian-title-serial-number-plugin/master/assets/configuration-interface-v0_0_2.png)
+![configuration interface](https://raw.githubusercontent.com/yalvhe2009/obsidian-title-serial-number-plugin/main/assets/configuration-interface.png)
 
 ### Settings Options
 
