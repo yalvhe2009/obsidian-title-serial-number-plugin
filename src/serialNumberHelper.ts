@@ -1,47 +1,154 @@
-
+import { TitleSerialNumberPluginSettings } from './settings';
+import { NumberConverter } from './numberConverter';
 
 /**
- * 序号类
+ * 序号生成器类
+ * 负责管理标题计数器和生成序号字符串
  */
- export class SerialNumberHelper{
-    /** Hx的序号 */
-    private static hxSerialNumbers: number[] = [0, 0, 0, 0, 0, 0];
+export class SerialNumberHelper {
+    // 每个标题级别的计数器 (索引0对应H1, 索引5对应H6)
+    private counters: number[] = [0, 0, 0, 0, 0, 0];
+    
+    // 插件设置
+    private settings: TitleSerialNumberPluginSettings;
+
+    constructor(settings: TitleSerialNumberPluginSettings) {
+        this.settings = settings;
+    }
 
     /**
-     * 重置区间为[idx,6]的序号为0
-     * @param idx 若idx=2（索引从0开始，故表示当前为h3），则把h3、h4、h5、h6的序号重置为0
+     * 更新设置
      */
-    public static resetHxSerialNumbers(idx: number){
-        for (let index = idx; index < 6; index++) {
-            SerialNumberHelper.hxSerialNumbers[index] = 0;
+    public updateSettings(settings: TitleSerialNumberPluginSettings): void {
+        this.settings = settings;
+    }
+
+    /**
+     * 重置所有计数器为0
+     */
+    public resetAllCounters(): void {
+        this.counters = [0, 0, 0, 0, 0, 0];
+    }
+
+    /**
+     * 重置指定级别及其所有子级别的计数器
+     * @param level 标题级别 (1-6)
+     */
+    public resetCountersFrom(level: number): void {
+        for (let i = level - 1; i < 6; i++) {
+            this.counters[i] = 0;
         }
     }
 
-	/**
-	 * 获取序号
-	 * @param level 当前标题等级；如h4，则level=4 (即文章中这样写的: `#### 标题`)
-	 * @param startWith 取值范围：1~6；从h几开始添加标题，如2，则#不生成序号，##生成序号1、2、3，###生成序号1.1、1.2、1.3……
-	 * @param endWith 取值范围 `1~7`；如2，则只对h1生成序号；如7，则对h1~6生成序号
-	 * @returns 点分序号 或 空字符串
-	 */
-    public static getSerialNumberStr(level: number, activedHeadlines: number[]): string{
-        if (!activedHeadlines.includes(level)) {
-            return '';//不在激活列表的标题, 不会生成序号
+    /**
+     * 检查指定级别是否在编号范围内
+     * @param level 标题级别 (1-6)
+     * @returns 是否需要编号
+     */
+    public isLevelInRange(level: number): boolean {
+        return level >= this.settings.startLevel && level <= this.settings.endLevel;
+    }
+
+    /**
+     * 为指定标题级别生成序号
+     * @param level 标题级别 (1-6)
+     * @returns 序号字符串，如果该级别不在范围内则返回空字符串
+     */
+    public generateSerialNumber(level: number): string {
+        // 检查是否在编号范围内
+        if (!this.isLevelInRange(level)) {
+            return '';
         }
 
-        let serialLevel: number = activedHeadlines.indexOf(level) + 1;//序号等级, 如激活列表activedHeadlines=[3,4,6], 则[### 标题]会被转换为[### 1 标题], 此时h3对应的序号等级应该是1, 也就是说, 真实生成的序号应该只有一位数
+        const { startLevel, endLevel, separator, levelStyles } = this.settings;
 
-        let newSerialNumber: string = '';//新的序号
-        for (let idx = 0; idx < serialLevel; idx++) {
-            if (idx == serialLevel - 1) {
-                SerialNumberHelper.resetHxSerialNumbers(idx + 1);//若当前是h3，则把h4、h5、h6的索引值清空为0；
-                SerialNumberHelper.hxSerialNumbers[idx] += 1;
-                newSerialNumber += `${SerialNumberHelper.hxSerialNumbers[idx]}`;
-            }
-            else{
-                newSerialNumber += `${SerialNumberHelper.hxSerialNumbers[idx]}.`;
-            }
+        // 增加当前级别的计数器
+        this.counters[level - 1]++;
+
+        // 重置所有子级别的计数器
+        this.resetCountersFrom(level + 1);
+
+        // 构建序号字符串
+        const parts: string[] = [];
+        
+        for (let l = startLevel; l <= level; l++) {
+            const count = this.counters[l - 1];
+            
+            // 如果父级别计数为0，说明文档结构有问题，但我们仍然生成序号
+            // 使用1作为默认值以避免生成0
+            const effectiveCount = count > 0 ? count : 1;
+            
+            const style = levelStyles[l] || 'arabic';
+            const converted = NumberConverter.convert(effectiveCount, style);
+            parts.push(converted);
         }
-        return `${newSerialNumber}`;
+
+        return parts.join(separator);
+    }
+
+    /**
+     * 获取当前级别的计数器值
+     * @param level 标题级别 (1-6)
+     * @returns 计数器值
+     */
+    public getCounter(level: number): number {
+        if (level < 1 || level > 6) return 0;
+        return this.counters[level - 1];
+    }
+
+    /**
+     * 创建用于匹配标题的正则表达式
+     * 匹配格式: ## [可选的序号] 标题内容
+     * @returns 正则表达式
+     */
+    public static createHeadingRegex(): RegExp {
+        const serialPattern = NumberConverter.getSerialNumberPattern();
+        // 匹配: #号 + 空格 + 可选的(序号 + 空格) + 标题内容
+        // 分组1: #号
+        // 分组2: 可选的序号(带尾部空格)
+        // 分组3: 标题内容
+        return new RegExp(`^(#{1,6}) (?:(${serialPattern}) )?(.*)$`, 'gm');
+    }
+
+    /**
+     * 处理文档内容，添加序号
+     * @param content 原始文档内容
+     * @returns 处理后的文档内容
+     */
+    public processContent(content: string): string {
+        this.resetAllCounters();
+        
+        const regex = SerialNumberHelper.createHeadingRegex();
+        
+        // 使用 replace 回调函数处理每个匹配
+        const result = content.replace(regex, (match, hashes, oldSerial, title) => {
+            const level = hashes.length;
+            
+            // 生成新序号
+            const newSerial = this.generateSerialNumber(level);
+            
+            // 如果不在编号范围内，保留原标题（去掉旧序号）
+            if (newSerial === '') {
+                return `${hashes} ${title}`;
+            }
+            
+            return `${hashes} ${newSerial} ${title}`;
+        });
+        
+        this.resetAllCounters();
+        return result;
+    }
+
+    /**
+     * 清除文档中的所有序号
+     * @param content 原始文档内容
+     * @returns 清除序号后的文档内容
+     */
+    public static clearSerialNumbers(content: string): string {
+        const regex = SerialNumberHelper.createHeadingRegex();
+        
+        return content.replace(regex, (match, hashes, oldSerial, title) => {
+            return `${hashes} ${title}`;
+        });
     }
 }

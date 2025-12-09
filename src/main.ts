@@ -1,109 +1,107 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { Editor, MarkdownView, Notice, Plugin } from 'obsidian';
 import { SerialNumberHelper } from './serialNumberHelper';
-import { TitleSerialNumberPluginSettings, TitleSerialNumberPluginSettingTab } from './settings';
-
-
-
-
-const DEFAULT_SETTINGS: TitleSerialNumberPluginSettings = {
-	activedHeadlines: [1, 2, 3, 4, 5, 6]
-}
+import { 
+    TitleSerialNumberPluginSettings, 
+    TitleSerialNumberPluginSettingTab,
+    DEFAULT_SETTINGS 
+} from './settings';
 
 export default class TitleSerialNumberPlugin extends Plugin {
-	settings: TitleSerialNumberPluginSettings;
+    settings: TitleSerialNumberPluginSettings;
+    private serialHelper: SerialNumberHelper;
 
-	async onload() {
-		await this.loadSettings();
+    async onload() {
+        await this.loadSettings();
+        
+        // 初始化序号生成器
+        this.serialHelper = new SerialNumberHelper(this.settings);
 
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'set-title-serial-number-editor-command',
-			name: 'Set Serial Number For Title',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				//console.log(this.settings);
-				let startWith: number = 1//parseInt(this.settings.startWith);
-				let endWith: number = 3//parseInt(this.settings.endWith);
-				if(startWith > endWith){
-					new Notice('Your configuration is ERROR, command terminated!');
-					return;
-				}
-				//startWith == endWith时，仅仅对这一数组等级的进行标题添加操作
-				endWith += 1;//为了写程序方便，把结束自增1
+        // 添加设置序号命令
+        this.addCommand({
+            id: 'set-title-serial-number',
+            name: '添加标题序号 (Set Serial Number)',
+            editorCallback: (editor: Editor, view: MarkdownView) => {
+                this.setSerialNumbers(editor);
+            }
+        });
 
-				const regex = /^([#]+) ([0-9.]* *)(.*)$/gm;
-				let originVal: string = editor.getValue();
-				let m;
-				while ((m = regex.exec(originVal)) !== null) {
-					if (m.index === regex.lastIndex) {
-						regex.lastIndex++;
-					}
-					//js 返回的匹配结果：groupIndex=0表示匹配到的字符串、groupIndex=1表示匹配到的字符串的第一个分组的值、groupIndex=2表示匹配到的字符串的第二个分组的值
-					let str: string = m[0];//当前匹配到的完整字符串
-					let wellStr:string = m[1];//井号的字符串；用于判定是h1还是h2还是……h6
-					let oldSerialNumber: string = m[2];//旧的标题号（如果有）；如1.1, 1. , 2.2.1,……
-					let title:string = m[3];
-					let matchStartIndex:number = m.index;//匹配项在文本中的索引位置
-					//获取序号
-					let newSerialNumber = SerialNumberHelper.getSerialNumberStr(wellStr.length, this.settings.activedHeadlines);//新的序号
-					let result = '';
-					if (newSerialNumber === '') {
-						result = `${wellStr} ${title}`;
-					}
-					else{
-						result = `${wellStr} ${newSerialNumber} ${title}`;
-					}
-					let sub1 = originVal.substring(0, matchStartIndex);
-					let sub2 = originVal.substring(matchStartIndex + str.length);
-					originVal = sub1 + '' + result + sub2;					
-				}
-				editor.setValue(originVal);
-				SerialNumberHelper.resetHxSerialNumbers(0);//全部重置为0；
-			}
-		});
+        // 添加清除序号命令
+        this.addCommand({
+            id: 'clear-title-serial-number',
+            name: '清除标题序号 (Clear Serial Number)',
+            editorCallback: (editor: Editor, view: MarkdownView) => {
+                this.clearSerialNumbers(editor);
+            }
+        });
 
-		this.addCommand({
-			id: 'clear-title-serial-number-editor-command',
-			name: 'Clear Serial Number For Title',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				
-				const regex2 = /^([#]+) ([0-9.]* *)(.*)$/gm;
-				let originVal: string = editor.getValue();
-				let m;
-				while ((m = regex2.exec(originVal)) !== null) {
-					if (m.index === regex2.lastIndex) {
-						regex2.lastIndex++;
-					}
-					console.log(m);
-					//js 返回的匹配结果：groupIndex=0表示匹配到的字符串、groupIndex=1表示匹配到的字符串的第一个分组的值、groupIndex=2表示匹配到的字符串的第二个分组的值
-					let str: string = m[0];//当前匹配到的完整字符串
-					let wellStr:string = m[1];//井号的字符串；用于判定是h1还是h2还是……h6
-					let oldSerialNumber: string = m[2];//旧的标题号（如果有）；如1.1, 1. , 2.2.1,……
-					let title:string = m[3];
-					let matchStartIndex:number = m.index;//匹配项在文本中的索引位置
-					
-					let result = `${wellStr} ${title}`;
-					let sub1 = originVal.substring(0, matchStartIndex);
-					let sub2 = originVal.substring(matchStartIndex + str.length);
-					originVal = sub1 + '' + result + sub2;
-				}
-				editor.setValue(originVal);
-				SerialNumberHelper.resetHxSerialNumbers(0);//全部重置为0；
-			}
-		});
+        // 添加设置页面
+        this.addSettingTab(new TitleSerialNumberPluginSettingTab(this.app, this));
+    }
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new TitleSerialNumberPluginSettingTab(this.app, this));
-	}
+    onunload() {
+        // 清理工作
+    }
 
-	onunload() {
+    /**
+     * 为文档添加序号
+     */
+    private setSerialNumbers(editor: Editor): void {
+        // 验证设置
+        if (this.settings.startLevel > this.settings.endLevel) {
+            new Notice('配置错误：起始级别不能大于结束级别！');
+            return;
+        }
 
-	}
+        // 更新序号生成器的设置
+        this.serialHelper.updateSettings(this.settings);
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
+        // 获取编辑器内容
+        const content = editor.getValue();
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+        // 处理内容
+        const newContent = this.serialHelper.processContent(content);
+
+        // 更新编辑器
+        if (content !== newContent) {
+            editor.setValue(newContent);
+            new Notice('标题序号已添加！');
+        } else {
+            new Notice('没有需要添加序号的标题。');
+        }
+    }
+
+    /**
+     * 清除文档中的序号
+     */
+    private clearSerialNumbers(editor: Editor): void {
+        const content = editor.getValue();
+        const newContent = SerialNumberHelper.clearSerialNumbers(content);
+
+        if (content !== newContent) {
+            editor.setValue(newContent);
+            new Notice('标题序号已清除！');
+        } else {
+            new Notice('没有需要清除的序号。');
+        }
+    }
+
+    async loadSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        
+        // 确保 levelStyles 完整
+        for (let i = 1; i <= 6; i++) {
+            if (!this.settings.levelStyles[i]) {
+                this.settings.levelStyles[i] = 'arabic';
+            }
+        }
+    }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
+        
+        // 更新序号生成器的设置
+        if (this.serialHelper) {
+            this.serialHelper.updateSettings(this.settings);
+        }
+    }
 }
