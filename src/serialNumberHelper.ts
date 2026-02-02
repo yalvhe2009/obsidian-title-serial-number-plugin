@@ -110,6 +110,49 @@ export class SerialNumberHelper {
         return new RegExp(`^(#{1,6}) (?:(${serialPattern}) )?(.*)$`, 'gm');
     }
 
+    // 代码块占位符前缀和后缀
+    private static readonly CODE_BLOCK_PLACEHOLDER_PREFIX = '<<<CODE_BLOCK_PLACEHOLDER_';
+    private static readonly CODE_BLOCK_PLACEHOLDER_SUFFIX = '_>>>';
+
+    /**
+     * 保护代码块，将代码块替换为占位符
+     * @param content 原始内容
+     * @returns [保护后的内容, 代码块数组]
+     */
+    private static protectCodeBlocks(content: string): [string, string[]] {
+        const codeBlocks: string[] = [];
+        
+        // 匹配围栏代码块 (``` 或 ~~~)
+        // 支持 ```language 格式，匹配到对应的结束标记
+        const fencePattern = /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1$/gm;
+        
+        const protectedContent = content.replace(fencePattern, (match) => {
+            const index = codeBlocks.length;
+            codeBlocks.push(match);
+            return `${SerialNumberHelper.CODE_BLOCK_PLACEHOLDER_PREFIX}${index}${SerialNumberHelper.CODE_BLOCK_PLACEHOLDER_SUFFIX}`;
+        });
+        
+        return [protectedContent, codeBlocks];
+    }
+
+    /**
+     * 还原代码块，将占位符替换回原始代码块
+     * @param content 包含占位符的内容
+     * @param codeBlocks 代码块数组
+     * @returns 还原后的内容
+     */
+    private static restoreCodeBlocks(content: string, codeBlocks: string[]): string {
+        const placeholderPattern = new RegExp(
+            `${SerialNumberHelper.CODE_BLOCK_PLACEHOLDER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\d+)${SerialNumberHelper.CODE_BLOCK_PLACEHOLDER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+            'g'
+        );
+        
+        return content.replace(placeholderPattern, (_, indexStr) => {
+            const index = parseInt(indexStr, 10);
+            return codeBlocks[index] || '';
+        });
+    }
+
     /**
      * 处理文档内容，添加序号
      * @param content 原始文档内容
@@ -118,10 +161,13 @@ export class SerialNumberHelper {
     public processContent(content: string): string {
         this.resetAllCounters();
         
+        // 1. 保护代码块
+        const [protectedContent, codeBlocks] = SerialNumberHelper.protectCodeBlocks(content);
+        
         const regex = SerialNumberHelper.createHeadingRegex();
         
-        // 使用 replace 回调函数处理每个匹配
-        const result = content.replace(regex, (match, hashes, oldSerial, title) => {
+        // 2. 使用 replace 回调函数处理每个匹配
+        const result = protectedContent.replace(regex, (match, hashes, oldSerial, title) => {
             const level = hashes.length;
             
             // 生成新序号
@@ -135,8 +181,11 @@ export class SerialNumberHelper {
             return `${hashes} ${newSerial} ${title}`;
         });
         
+        // 3. 还原代码块
+        const finalResult = SerialNumberHelper.restoreCodeBlocks(result, codeBlocks);
+        
         this.resetAllCounters();
-        return result;
+        return finalResult;
     }
 
     /**
@@ -145,10 +194,17 @@ export class SerialNumberHelper {
      * @returns 清除序号后的文档内容
      */
     public static clearSerialNumbers(content: string): string {
+        // 1. 保护代码块
+        const [protectedContent, codeBlocks] = SerialNumberHelper.protectCodeBlocks(content);
+        
         const regex = SerialNumberHelper.createHeadingRegex();
         
-        return content.replace(regex, (match, hashes, oldSerial, title) => {
+        // 2. 清除序号
+        const result = protectedContent.replace(regex, (match, hashes, oldSerial, title) => {
             return `${hashes} ${title}`;
         });
+        
+        // 3. 还原代码块
+        return SerialNumberHelper.restoreCodeBlocks(result, codeBlocks);
     }
 }
