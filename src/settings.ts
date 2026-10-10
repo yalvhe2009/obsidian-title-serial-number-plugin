@@ -173,7 +173,7 @@ export class TitleSerialNumberPluginSettingTab extends PluginSettingTab {
                     parts.push(NumberConverter.convert(num, style));
                 }
                 
-                const serialNumber = parts.join(separator);
+                const serialNumber = NumberConverter.formatSerialNumber(parts, separator);
                 const hashes = '#'.repeat(level);
                 previewLines.push(`${hashes} ${serialNumber} Example Heading`);
             }

@@ -60,7 +60,7 @@ export class SerialNumberHelper {
             return '';
         }
 
-        const { startLevel, endLevel, separator, levelStyles } = this.settings;
+        const { startLevel, separator, levelStyles } = this.settings;
 
         // 增加当前级别的计数器
         this.counters[level - 1]++;
@@ -83,7 +83,7 @@ export class SerialNumberHelper {
             parts.push(converted);
         }
 
-        return parts.join(separator);
+        return NumberConverter.formatSerialNumber(parts, separator);
     }
 
     /**
@@ -101,8 +101,8 @@ export class SerialNumberHelper {
      * 匹配格式: ## [可选的序号] 标题内容
      * @returns 正则表达式
      */
-    public static createHeadingRegex(): RegExp {
-        const serialPattern = NumberConverter.getSerialNumberPattern();
+    public static createHeadingRegex(separator = '.'): RegExp {
+        const serialPattern = NumberConverter.getSerialNumberPattern(separator);
         // 匹配: #号 + 空格 + 可选的(序号 + 空格) + 标题内容
         // 分组1: #号
         // 分组2: 可选的序号(带尾部空格)
@@ -164,7 +164,7 @@ export class SerialNumberHelper {
         // 1. 保护代码块
         const [protectedContent, codeBlocks] = SerialNumberHelper.protectCodeBlocks(content);
         
-        const regex = SerialNumberHelper.createHeadingRegex();
+        const regex = SerialNumberHelper.createHeadingRegex(this.settings.separator);
         
         // 2. 使用 replace 回调函数处理每个匹配
         const result = protectedContent.replace(regex, (match, hashes, oldSerial, title) => {
@@ -193,11 +193,11 @@ export class SerialNumberHelper {
      * @param content 原始文档内容
      * @returns 清除序号后的文档内容
      */
-    public static clearSerialNumbers(content: string): string {
+    public static clearSerialNumbers(content: string, separator = '.'): string {
         // 1. 保护代码块
         const [protectedContent, codeBlocks] = SerialNumberHelper.protectCodeBlocks(content);
         
-        const regex = SerialNumberHelper.createHeadingRegex();
+        const regex = SerialNumberHelper.createHeadingRegex(separator);
         
         // 2. 清除序号
         const result = protectedContent.replace(regex, (match, hashes, oldSerial, title) => {

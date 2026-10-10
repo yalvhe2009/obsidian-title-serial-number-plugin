@@ -30,6 +30,17 @@ A powerful Obsidian plugin that automatically adds customizable serial numbers t
 | `Set Serial Number` | Add serial numbers to all headings in the current document |
 | `Clear Serial Number` | Remove all serial numbers from headings in the current document |
 
+Numbering that contains alphabetic or Roman numerals uses parentheses, such as
+`(A)`, `(I)`, or `(I.1.a)`. Arabic and Chinese numbering keep their existing format.
+The parentheses distinguish these serial numbers from heading text such as
+`A guide` or `I think`, so adding or clearing numbers preserves those words.
+
+**Existing notes:** Unmarked alphabetic or Roman prefixes from earlier versions
+are now treated as title text. To update or clear an old serial, first wrap the
+whole serial in parentheses (for example, `# I Introduction` becomes
+`# (I) Introduction`). Otherwise, adding numbers will retain the old prefix as
+part of the title. Only mark prefixes that you know are serial numbers.
+
 ## Configuration
 
 Access the plugin settings through `Settings → Community Plugins → Title Serial Number Plugin`.
@@ -90,21 +101,21 @@ Access the plugin settings through `Settings → Community Plugins → Title Ser
 ### Output (with mixed styles: H1=Roman, H2=Arabic, H3=Alpha lowercase)
 
 ```markdown
-# I Introduction
+# (I) Introduction
 
-## I.1 Background
+## (I.1) Background
 
-### I.1.a History
+### (I.1.a) History
 
-### I.1.b Current State
+### (I.1.b) Current State
 
-## I.2 Methods
+## (I.2) Methods
 
-### I.2.a Approach A
+### (I.2.a) Approach A
 
-### I.2.b Approach B
+### (I.2.b) Approach B
 
-# II Conclusion
+# (II) Conclusion
 ```
 
 ## Installation

@@ -75,7 +75,7 @@ export default class TitleSerialNumberPlugin extends Plugin {
      */
     private clearSerialNumbers(editor: Editor): void {
         const content = editor.getValue();
-        const newContent = SerialNumberHelper.clearSerialNumbers(content);
+        const newContent = SerialNumberHelper.clearSerialNumbers(content, this.settings.separator);
 
         if (content !== newContent) {
             editor.setValue(newContent);

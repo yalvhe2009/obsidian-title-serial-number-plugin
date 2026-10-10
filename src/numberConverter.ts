@@ -185,29 +185,33 @@ export class NumberConverter {
     }
 
     /**
-     * 获取用于匹配序号的正则表达式模式
-     * @returns 匹配各种序号格式的正则表达式字符串
+     * 字母和罗马数字必须使用显式括号，避免与 A guide、I think 等正文混淆。
+     * 预览与实际编号共用同一种格式。
      */
-    public static getSerialNumberPattern(): string {
-        // 匹配各种可能的序号格式：
-        // - 阿拉伯数字: 1, 1.2, 1.2.3
-        // - 中文数字: 一, 二, 一.二
-        // - 罗马数字: I, II, III, i, ii, iii
-        // - 字母: A, B, a, b
-        // - 混合格式: 1.一.A
-        const arabicPattern = '[0-9]+';
-        const chinesePattern = '[零一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+';
-        const romanPattern = '[IVXLCDMivxlcdm]+';
-        const alphaPattern = '[A-Za-z]+';
-        
-        // 单个序号部分
-        const singlePart = `(?:${arabicPattern}|${chinesePattern}|${romanPattern}|${alphaPattern})`;
-        
-        // 分隔符: 点、顿号、横线、斜杠等
-        const separator = '[.、\\-/]';
-        
-        // 完整的序号模式: 可能有多个部分用分隔符连接
-        return `(?:${singlePart}(?:${separator}${singlePart})*)`;
+    public static formatSerialNumber(parts: string[], separator: string): string {
+        const serial = parts.join(separator);
+        return parts.some(part => /[A-Za-z]/.test(part)) ? `(${serial})` : serial;
+    }
+
+    /**
+     * 只将数字前缀或带括号的序号识别为旧编号。
+     * 无括号的英文前缀存在歧义，必须保留为标题正文。
+     */
+    public static getSerialNumberPattern(separator = '.'): string {
+        const numericCharacters = '0-9零一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟';
+        const numericPart = `[${numericCharacters}]+`;
+        const markedPart = `[${numericCharacters}A-Za-z]+`;
+
+        // 支持当前自定义分隔符，同时兼容原有的数字编号分隔符。
+        // 空分隔符生成的连续字符已由上述字符类匹配，不加入空的正则分支。
+        const separators = Array.from(new Set([separator, '.', '、', '-', '/']))
+            .filter(value => value !== '')
+            .map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const joiner = `(?:${separators.join('|')})`;
+        const numericSerial = `${numericPart}(?:${joiner}${numericPart})*`;
+        const markedSerial = `${markedPart}(?:${joiner}${markedPart})*`;
+
+        return `(?:\\(${markedSerial}\\)|${numericSerial})`;
     }
 }
 
